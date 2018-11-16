@@ -179,6 +179,74 @@ noaa = [
 	_R2, _2Q1, _P1, _2SM2, _M3, _L2, _2MK3, _K2 ,_M8, _MS4, _MO3, _SN4, _MNS2,
 	_N4, _L4, _M10, _M12, _S8, _MK4, _OP2,_2MSN4, _MSTM,
 ]
+
+_constit_mapping = {
+	"Z0": _Z0,
+	"SA": _Sa,
+	"SSA": _Ssa,
+	'MM': _Mm,
+	"MF": _Mf,
+	"Q1": _Q1,
+	"O1": _O1,
+	"K1": _K1,
+	"J1": _J1,
+	"M1": _M1,
+	"P1": _P1,
+	"S1": _S1,
+	"OO1": _OO1,
+	"2N2": _2N2,
+	"N2": _N2,
+	"NU2": _nu2,
+	"M2": _M2,
+	"LAMBDA2": _lambda2,
+	"L2": _L2,
+	"T2": _T2,
+	"S2": _S2,
+	"R2": _R2,
+	"K2": _K2,
+	"M3": _M3,
+	"MSF": _MSF,
+	"MSTM": _MSTM,
+	"2Q1": _2Q1,
+	"RHO1": _rho1,
+	"MU2": _mu2,
+	"2SM2": _2SM2,
+	"OP2": _OP2,
+	"MNS2": _MNS2,
+	"2MK3": _2MK3,
+	"MK3": _MK3,
+	"MO3": _MO3,
+	"MN4": _MN4,
+	"M4": _M4,
+	"MS4": _MS4,
+	"S4": _S4,
+	"N4": _N4,
+	"L4": _L4,
+	"SN4": _SN4,
+	"MK4": _MK4,
+	"2MSN4": _2MSN4,
+	"M6": _M6,
+	"S6": _S6,
+	"M8": _M8,
+	"S8": _S8,
+	"M10": _M10,
+	"M12": _M12
+}
+
+def get_constituent_by_name(constituent_name):
+	## Upper-case the provided name to match the mapping keys
+	cn = constituent_name.upper()
+	if cn in _constit_mapping.keys():
+		return _constit_mapping[cn]
+	
+	## Not found, raise error
+	raise ValueError("No constituent found for name '{}'".format(constituent_name))
+	
+
+def get_constituent_names():
+	return list(_constit_mapping.keys())
+	
+
 #
 #  u'RO1', u'SIGMA1', u'PI1',
 # u'FI1', u'CHI1', u'THETA1', u'SO1', u'MP1', u'PSI1',
