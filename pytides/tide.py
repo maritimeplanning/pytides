@@ -40,7 +40,7 @@ class Tide(object):
 		radians -- boolean representing whether phases are in radians
 		(default False)
 		"""
-		if None not in [constituents, amplitudes, phases]:
+		if np.all([constituents, amplitudes, phases]):
 			if len(constituents) == len(amplitudes) == len(phases):
 				model = np.zeros(len(phases), dtype=Tide.dtype)
 				model['constituent'] = np.array(constituents)
