@@ -2,8 +2,8 @@
 from collections import OrderedDict, Iterable
 from itertools import takewhile, count
 try:
-	from itertools import izip, ifilter	
-except ImportError: #Python3
+	from itertools import izip, ifilter
+except ImportError: # Python3
 	izip = zip
 	ifilter = filter
 from datetime import datetime, timedelta
@@ -12,7 +12,7 @@ from scipy.optimize import leastsq, fsolve
 from .astro import astro
 from . import constituent
 
-d2r, r2d = np.pi/180.0, 180.0/np.pi
+
 
 class Tide(object):
 	dtype = np.dtype([
@@ -29,29 +29,35 @@ class Tide(object):
 			radians = False
 		):
 		"""
-		Initialise a tidal model. Provide constituents, amplitudes and phases OR a model.
+		Initialise a tidal model. Provide constituents, amplitudes and phases
+		OR a model.
 		Arguments:
 		constituents -- list of constituents used in the model.
 		amplitudes -- list of amplitudes corresponding to constituents
 		phases -- list of phases corresponding to constituents
-		model -- an ndarray of type Tide.dtype representing the constituents, amplitudes and phases.
-		radians -- boolean representing whether phases are in radians (default False)
+		model -- an ndarray of type Tide.dtype representing the constituents,
+		amplitudes and phases.
+		radians -- boolean representing whether phases are in radians
+		(default False)
 		"""
-		if None not in [constituents, amplitudes, phases]:
+		if np.all([constituents, amplitudes, phases]):
 			if len(constituents) == len(amplitudes) == len(phases):
 				model = np.zeros(len(phases), dtype=Tide.dtype)
 				model['constituent'] = np.array(constituents)
 				model['amplitude'] = np.array(amplitudes)
 				model['phase'] = np.array(phases)
 			else:
-				raise ValueError("Constituents, amplitudes and phases should all be arrays of equal length.")
+				raise ValueError("Constituents, amplitudes and phases should \
+				 all be arrays of equal length.")
 		elif model is not None:
 			if not model.dtype == Tide.dtype:
-				raise ValueError("Model must be a numpy array with dtype == Tide.dtype")
+				raise ValueError("Model must be a numpy array with \
+				dtype == Tide.dtype")
 		else:
-			raise ValueError("Must be initialised with constituents, amplitudes and phases; or a model.")
+			raise ValueError("Must be initialised with constituents, \
+			amplitudes and phases; or a model.")
 		if radians:
-			model['phase'] = r2d*model['phase']
+			model['phase'] = np.degrees(model['phase'])
 		self.model = model[:]
 		self.normalize()
 
@@ -61,17 +67,21 @@ class Tide(object):
 	@staticmethod
 	def _prepare(constituents, t0, t = None, radians = True):
 		"""
-		Return constituent speed and equilibrium argument at a given time, and constituent node factors at given times.
+		Return constituent speed and equilibrium argument at a given time, and
+		constituent node factors at given times.
 		Arguments:
 		constituents -- list of constituents to prepare
-		t0 -- time at which to evaluate speed and equilibrium argument for each constituent
-		t -- list of times at which to evaluate node factors for each constituent (default: t0)
-		radians -- whether to return the angular arguments in radians or degrees (default: True)
+		t0 -- time at which to evaluate speed and equilibrium argument for
+		each constituent
+		t -- list of times at which to evaluate node factors for each
+		constituent (default: t0)
+		radians -- whether to return the angular arguments in radians or
+		degrees (default: True)
 		"""
-		#The equilibrium argument is constant and taken at the beginning of the
-		#time series (t0).  The speed of the equilibrium argument changes very
-		#slowly, so again we take it to be constant over any length of data. The
-		#node factors change more rapidly.
+		# The equilibrium argument is constant and taken at the beginning of the
+		# time series (t0).  The speed of the equilibrium argument changes very
+		# slowly, so again we take it to be constant over any length of data. The
+		# node factors change more rapidly.
 		if isinstance(t0, Iterable):
 			t0 = t0[0]
 		if t is None:
@@ -81,18 +91,25 @@ class Tide(object):
 		a0 = astro(t0)
 		a = [astro(t_i) for t_i in t]
 
-		#For convenience give u, V0 (but not speed!) in [0, 360)
+		# For convenience give u, V0 (but not speed!) in [0, 360)
 		V0 = np.array([c.V(a0) for c in constituents])[:, np.newaxis]
 		speed = np.array([c.speed(a0) for c in constituents])[:, np.newaxis]
-		u = [np.mod(np.array([c.u(a_i) for c in constituents])[:, np.newaxis], 360.0)
-			 for a_i in a]
-		f = [np.mod(np.array([c.f(a_i) for c in constituents])[:, np.newaxis], 360.0)
-			 for a_i in a]
+		u = [np.mod(
+				np.array([c.u(a_i) for c in constituents])[:, np.newaxis],
+				360.0
+				)
+			 for a_i in a
+			 ]
+		f = [np.mod(
+				np.array([c.f(a_i) for c in constituents])[:, np.newaxis],
+				360.0)
+			 for a_i in a
+			 ]
 
 		if radians:
-			speed = d2r*speed
-			V0 = d2r*V0
-			u = [d2r*each for each in u]
+			speed = np.radians(speed)
+			V0 = np.radians(V0)
+			u = [np.radians(each) for each in u]
 		return speed, u, f, V0
 
 	def at(self, t):
@@ -108,7 +125,7 @@ class Tide(object):
 		times = self._times(t0, [(i + 0.5)*partition for i in range(len(t))])
 		speed, u, f, V0 = self.prepare(t0, times, radians = True)
 		H = self.model['amplitude'][:, np.newaxis]
-		p = d2r*self.model['phase'][:, np.newaxis]
+		p = np.radians(self.model['phase'][:, np.newaxis])
 
 		return np.concatenate([
 			Tide._tidal_series(t_i, H, p, speed, u_i, f_i, V0)
@@ -135,11 +152,18 @@ class Tide(object):
 
 	def form_number(self):
 		"""
-		Returns the model's form number, a helpful heuristic for classifying tides.
+		Returns the model's form number, a helpful heuristic for classifying
+		tides.
 		"""
+		MainC = [
+				constituent._K1,
+				constituent._O1,
+				constituent._M2,
+				constituent._S2
+				]
 		k1, o1, m2, s2 = (
 			np.extract(self.model['constituent'] == c, self.model['amplitude'])
-			for c in [constituent._K1, constituent._O1, constituent._M2, constituent._S2]
+			for c in MainC
 		)
 		return (k1+o1)/(m2+s2)
 
@@ -162,45 +186,59 @@ class Tide(object):
 		A generator for high and low tides.
 		Arguments:
 		t0 -- time after which extrema are sought
-		t1 -- optional time before which extrema are sought (if not given, the generator is infinite)
-		partition -- number of hours for which we consider the node factors to be constant (default: 2400.0)
+		t1 -- optional time before which extrema are sought
+		(if not given, the generator is infinite)
+		partition -- number of hours for which we consider the node
+		factors to be constant (default: 2400.0)
 		"""
 		if t1:
-			#yield from in python 3.4
+			# yield from in python 3.4
 			for e in takewhile(lambda t: t[0] < t1, self.extrema(t0)):
 				yield e
 		else:
-			#We assume that extrema are separated by at least delta hours
+			# We assume that extrema are separated by at least delta hours
 			delta = np.amin([
 				90.0 / c.speed(astro(t0)) for c in self.model['constituent']
 				if not c.speed(astro(t0)) == 0
 			])
-			#We search for stationary points from offset hours before t0 to
-			#ensure we find any which might occur very soon after t0.
+			# We search for stationary points from offset hours before t0 to
+			# ensure we find any which might occur very soon after t0.
 			offset = 24.0
-			partitions = (
-				Tide._times(t0, i*partition) for i in count()), (Tide._times(t0, i*partition) for i in count(1)
-			)
+			partitions =(Tide._times(t0, i*partition)
+						for i in count()
+						),(Tide._times(t0, i*partition)
+						for i in count(1)
+						)
 
-			#We'll overestimate to be on the safe side;
-			#values outside (start,end) won't get yielded.
+			# We'll overestimate to be on the safe side;
+			# values outside (start,end) won't get yielded.
 			interval_count = int(np.ceil((partition + offset) / delta)) + 1
 			amplitude = self.model['amplitude'][:, np.newaxis]
-			phase     = d2r*self.model['phase'][:, np.newaxis]
+			phase     = np.radians(self.model['phase'][:, np.newaxis])
 
 			for start, end in zip(*partitions):
-				speed, [u], [f], V0 = self.prepare(start, Tide._times(start, 0.5*partition))
-				#These derivatives don't include the time dependence of u or f,
-				#but these change slowly.
+				speed, [u], [f], V0 = self.prepare(
+											start,
+											 Tide._times(start, 0.5*partition)
+											 )
+				# These derivatives don't include the time dependence of u or f,
+				# but these change slowly.
 				def d(t):
-					return np.sum(-speed*amplitude*f*np.sin(speed*t + (V0 + u) - phase), axis=0)
+					return np.sum(-speed*amplitude*f*np.sin(speed*t +
+										(V0 + u) -
+									 	phase),
+									 axis=0)
 				def d2(t):
-					return np.sum(-speed**2.0 * amplitude*f*np.cos(speed*t + (V0 + u) - phase), axis=0)
-				#We'll overestimate to be on the safe side;
-				#values outside (start,end) won't get yielded.
+					return np.sum(-speed**2.0 * amplitude*f*np.cos(speed*t +
+										(V0 + u) - phase),
+									axis=0)
+				# We'll overestimate to be on the safe side;
+				# values outside (start,end) won't get yielded.
 				intervals = (
-					delta * i -offset for i in range(interval_count)), (delta*(i+1) - offset for i in range(interval_count)
-				)
+					delta * i -offset for i in range(interval_count)
+					),(
+					delta*(i+1) - offset for i in range(interval_count)
+					)
 				for a, b in zip(*intervals):
 					if d(a)*d(b) < 0:
 						extrema = fsolve(d, (a + b) / 2.0, fprime = d2)[0]
@@ -235,13 +273,20 @@ class Tide(object):
 		"""
 		partition = float(partition)
 		relative = hours - hours[0]
-		total_partitions = np.ceil(relative[-1] / partition + 10*np.finfo(np.float).eps).astype('int')
-		return [hours[np.floor(np.divide(relative, partition)) == i] for i in range(total_partitions)]
+		total_partitions = np.ceil(
+						relative[-1] / partition +
+						10*np.finfo(np.float).eps
+						).astype('int')
+		return [hours
+				[np.floor(np.divide(relative, partition)) == i]
+				for i in range(total_partitions)
+				]
 
 	@staticmethod
 	def _times(t0, hours):
 		"""
-		Return a (list of) datetime(s) given an initial time and an (list of) hourly offset(s).
+		Return a (list of) datetime(s) given an initial time and an (list of)
+		hourly offset(s).
 		Arguments:
 		t0 -- initial time
 		hours -- hourly offsets from t0
@@ -259,7 +304,8 @@ class Tide(object):
 
 	def normalize(self):
 		"""
-		Adapt self.model so that amplitudes are positive and phases are in [0,360) as per convention
+		Adapt self.model so that amplitudes are positive and phases are in
+		[0,360) as per convention
 		"""
 		for i, (_, amplitude, phase) in enumerate(self.model):
 			if amplitude < 0:
@@ -281,18 +327,23 @@ class Tide(object):
 			full_output  = False
 		):
 		"""
-		Return an instance of Tide which has been fitted to a series of tidal observations.
+		Return an instance of Tide which has been fitted to a series of
+		tidal observations.
 		Arguments:
 		It is not necessary to provide t0 or interval if t is provided.
 		heights -- ndarray of tidal observation heights
 		t -- ndarray of tidal observation times
 		t0 -- datetime representing the time at which heights[0] was recorded
 		interval -- hourly interval between readings
-		constituents -- list of constituents to use in the fit (default: constituent.noaa)
-		initial -- optional Tide instance to use as first guess for least squares solver
-		n_period -- only include constituents which complete at least this many periods (default: 2)
+		constituents -- list of constituents to use in the fit
+		(default: constituent.noaa)
+		initial -- optional Tide instance to use as first guess for least
+		squares solver
+		n_period -- only include constituents which complete at least this many
+		periods (default: 2)
 		callback -- optional function to be called at each iteration of the solver
-		full_output -- whether to return the output of scipy's leastsq solver (default: False)
+		full_output -- whether to return the output of scipy's leastsq solver
+		(default: False)
 		"""
 		if t is not None:
 			if isinstance(t[0], datetime):
@@ -312,18 +363,18 @@ class Tide(object):
 			                 "so that each height can be identified with an "
 			                 "instant in time.")
 
-		#Remove duplicate constituents (those which travel at exactly the same
-		#speed, irrespective of phase)
+		# Remove duplicate constituents (those which travel at exactly the same
+		# speed, irrespective of phase)
 		constituents = list(OrderedDict.fromkeys(constituents))
 
-		#No need for least squares to find the mean water level constituent z0,
-		#work relative to mean
+		# No need for least squares to find the mean water level constituent z0,
+		# work relative to mean
 		constituents = [c for c in constituents if not c == constituent._Z0]
 		z0 = np.mean(heights)
 		heights = heights - z0
 
-		#Only analyse frequencies which complete at least n_period cycles over
-		#the data period.
+		# Only analyse frequencies which complete at least n_period cycles over
+		# the data period.
 		constituents = [
 			c for c in constituents
 			if 360.0 * n_period < hours[-1] * c.speed(astro(t0))
@@ -334,12 +385,12 @@ class Tide(object):
 		hours = hours[sort]
 		heights = heights[sort]
 
-		#We partition our time/height data into intervals over which we consider
-		#the values of u and f to assume a constant value (that is, their true
-		#value at the midpoint of the interval).  Constituent
-		#speeds change much more slowly than the node factors, so we will
-		#consider these constant and equal to their speed at t0, regardless of
-		#the length of the time series.
+		# We partition our time/height data into intervals over which we consider
+		# the values of u and f to assume a constant value (that is, their true
+		# value at the midpoint of the interval).  Constituent
+		# speeds change much more slowly than the node factors, so we will
+		# consider these constant and equal to their speed at t0, regardless of
+		# the length of the time series.
 
 		partition = 240.0
 
@@ -348,7 +399,7 @@ class Tide(object):
 
 		speed, u, f, V0 = Tide._prepare(constituents, t0, times, radians = True)
 
-		#Residual to be minimised by variation of parameters (amplitudes, phases)
+		# Residual to be minimised by variation of parameters (amplitudes, phases)
 		def residual(hp):
 			H, p = hp[:n, np.newaxis], hp[n:, np.newaxis]
 			s = np.concatenate([
@@ -360,9 +411,9 @@ class Tide(object):
 				callback(res)
 			return res
 
-		#Analytic Jacobian of the residual - this makes solving significantly
-		#faster than just using gradient approximation, especially with many
-		#measurements / constituents.
+		# Analytic Jacobian of the residual - this makes solving significantly
+		# faster than just using gradient approximation, especially with many
+		# measurements / constituents.
 		def D_residual(hp):
 			H, p = hp[:n, np.newaxis], hp[n:, np.newaxis]
 			ds_dH = np.concatenate([
@@ -377,10 +428,10 @@ class Tide(object):
 
 			return np.append(-ds_dH, -ds_dp, axis=0)
 
-		#Initial guess for solver, haven't done any analysis on this since the
-		#solver seems to converge well regardless of the initial guess We do
-		#however scale the initial amplitude guess with some measure of the
-		#variation
+		# Initial guess for solver, haven't done any analysis on this since the
+		# solver seems to converge well regardless of the initial guess We do
+		# however scale the initial amplitude guess with some measure of the
+		# variation
 		amplitudes = np.ones(n) * (np.sqrt(np.dot(heights, heights)) / len(heights))
 		phases     = np.ones(n)
 
@@ -389,11 +440,16 @@ class Tide(object):
 				for i, c in enumerate(constituents):
 					if c0 == c:
 						amplitudes[i] = amplitude
-						phases[i] = d2r*phase
+						phases[i] = np.radians((phase))
 
 		initial = np.append(amplitudes, phases)
 
-		lsq = leastsq(residual, initial, Dfun=D_residual, col_deriv=True, ftol=1e-7)
+		lsq = leastsq(residual,
+						initial,
+						Dfun=D_residual,
+						col_deriv=True,
+						ftol=1e-7
+						)
 
 		model = np.zeros(1+n, dtype=cls.dtype)
 		model[0] = (constituent._Z0, z0, 0)
