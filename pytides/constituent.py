@@ -154,8 +154,8 @@ _MS4 = CompoundConstituent(name = 'MS4', members = [(_M2, 1), (_S2, 1)])
 _S4 = CompoundConstituent(name = 'S4', members = [(_S2, 2)])
 _N4 = CompoundConstituent(name = 'N4', members = [(_N2, 2)])
 _L4 = CompoundConstituent(name = 'L4', members = [(_L2, 2)])
-_SN4 = CompoundConstituent(name = 'SN4', ,members = [(_S2, 1), (_N2, 1)])
-_MK4 = CompoundConstituent(name = 'MK4', ,members = [(_M2, 1), (_K2, 1)])
+_SN4 = CompoundConstituent(name = 'SN4', members = [(_S2, 1), (_N2, 1)])
+_MK4 = CompoundConstituent(name = 'MK4', members = [(_M2, 1), (_K2, 1)])
 _2MSN4 = CompoundConstituent(name = '2MSN4', members = [(_S2, 1), (_M2, 2), (_N2, -1)])
 
 # Sixth-Diurnal
